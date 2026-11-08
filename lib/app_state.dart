@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -14,19 +15,64 @@ import 'obd/obd_client.dart';
 import 'obd/pids.dart';
 import 'obd/transport.dart';
 import 'obd/vehicle.dart';
+import 'repairs.dart';
+import 'service.dart';
 import 'speech.dart';
 import 'updater.dart';
+
+List<String> _strList(dynamic v) => v == null ? const [] : (v as List).map((e) => e.toString()).toList();
+
+Map<String, List<double>> _traces(dynamic v) {
+  if (v == null) return {};
+  final m = v as Map<String, dynamic>;
+  return m.map((k, e) => MapEntry(k, (e as List).map((x) => (x as num).toDouble()).toList()));
+}
 
 class SavedReport {
   final int id;
   final String title;
   final int score;
   final String text;
-  SavedReport(this.id, this.title, this.score, this.text);
+  final List<String> codes;
+  final List<String> findings;
+  final String vehicle;
+  final double? odometerKm;
+  final Map<String, List<double>> traces;
+  SavedReport(
+    this.id,
+    this.title,
+    this.score,
+    this.text, {
+    this.codes = const [],
+    this.findings = const [],
+    this.vehicle = '',
+    this.odometerKm,
+    this.traces = const {},
+  });
 
-  Map<String, dynamic> toJson() => {'id': id, 'title': title, 'score': score, 'text': text};
-  factory SavedReport.fromJson(Map<String, dynamic> j) =>
-      SavedReport(j['id'] as int, j['title'] as String, j['score'] as int, j['text'] as String);
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'title': title,
+        'score': score,
+        'text': text,
+        'codes': codes,
+        'findings': findings,
+        'vehicle': vehicle,
+        'odometerKm': odometerKm,
+        'traces': traces,
+      };
+
+  factory SavedReport.fromJson(Map<String, dynamic> j) => SavedReport(
+        j['id'] as int,
+        j['title'] as String,
+        j['score'] as int,
+        j['text'] as String,
+        codes: _strList(j['codes']),
+        findings: _strList(j['findings']),
+        vehicle: (j['vehicle'] ?? '') as String,
+        odometerKm: (j['odometerKm'] as num?)?.toDouble(),
+        traces: _traces(j['traces']),
+      );
 }
 
 /// Всё состояние приложения. Экраны перерисовываются при notifyListeners().
@@ -67,6 +113,12 @@ class AppState extends ChangeNotifier {
   final Map<int, List<double>> hist = {};
 
   List<SavedReport> reports = [];
+  List<RepairEntry> repairs = [];
+  bool bigText = false;
+  List<ServiceItem> services = List<ServiceItem>.from(defaultServices);
+  bool checkingAdapter = false;
+  String? adapterCheck;
+  File? _repairFile;
 
   String token = '';
   String updateStatus = '';
@@ -89,8 +141,17 @@ class AppState extends ChangeNotifier {
     await _speaker.init();
     final base = await getApplicationDocumentsDirectory();
     _reportsDir = Directory('${base.path}/reports')..createSync(recursive: true);
+    _repairFile = File('${base.path}/repairs.json');
+    _loadRepairs();
     final prefs = await SharedPreferences.getInstance();
     token = prefs.getString('gh_token') ?? '';
+    bigText = prefs.getBool('bigText') ?? false;
+    final sv = prefs.getString('services');
+    if (sv != null) {
+      try {
+        services = (jsonDecode(sv) as List).map((e) => ServiceItem.fromJson(e as Map<String, dynamic>)).toList();
+      } catch (_) {}
+    }
     _loadReports();
     notifyListeners();
   }
@@ -128,6 +189,33 @@ class AppState extends ChangeNotifier {
       if (await f.exists()) await f.delete();
     }
     reports = reports.where((x) => x.id != r.id).toList();
+    notifyListeners();
+  }
+
+  void _loadRepairs() {
+    final f = _repairFile;
+    if (f == null || !f.existsSync()) return;
+    try {
+      repairs = (jsonDecode(f.readAsStringSync()) as List)
+          .map((e) => RepairEntry.fromJson(e as Map<String, dynamic>))
+          .toList();
+    } catch (_) {}
+  }
+
+  Future<void> _saveRepairs() async {
+    final f = _repairFile;
+    if (f != null) await f.writeAsString(jsonEncode(repairs.map((r) => r.toJson()).toList()));
+  }
+
+  Future<void> addRepair(String title, String note, List<String> codes) async {
+    repairs = [RepairEntry(DateTime.now().millisecondsSinceEpoch, title, note, codes), ...repairs];
+    await _saveRepairs();
+    notifyListeners();
+  }
+
+  Future<void> deleteRepair(RepairEntry r) async {
+    repairs = repairs.where((x) => x.id != r.id).toList();
+    await _saveRepairs();
     notifyListeners();
   }
 
@@ -249,7 +337,11 @@ class AppState extends ChangeNotifier {
   void _speakNewAlarms() {
     final now = alarmsFor(live, hist).where((a) => a.level == 2).toList();
     for (final a in now) {
-      if (_spoken.add(a.name)) _speaker.say('Тревога. ${a.name}. ${a.text}');
+      if (_spoken.add(a.name)) {
+        _speaker.say('Тревога. ${a.name}. ${a.text}');
+        HapticFeedback.heavyImpact();
+        SystemSound.play(SystemSoundType.alert);
+      }
     }
     _spoken.removeWhere((n) => !now.any((a) => a.name == n));
   }
@@ -281,7 +373,7 @@ class AppState extends ChangeNotifier {
         final h = hist[p] ?? <double>[];
         hist[p] = [...(h.length >= 59 ? h.sublist(h.length - 59) : h), v];
       });
-      if (voice) _speakNewAlarms();
+      _speakNewAlarms();
       notifyListeners();
     }
     liveOn = false;
@@ -331,6 +423,7 @@ class AppState extends ChangeNotifier {
             time: now,
             vehicle: vehicle,
             vin: vin,
+            odometerKm: vehicleInfo?.odometerKm,
             adapter: adapter,
             stored: stored,
             pending: pending,
@@ -422,6 +515,7 @@ class AppState extends ChangeNotifier {
         time: now,
         vehicle: vehicle,
         vin: vin,
+        odometerKm: vehicleInfo?.odometerKm,
         adapter: adapter,
         stored: st,
         pending: pe,
@@ -450,13 +544,91 @@ class AppState extends ChangeNotifier {
       readiness = rd;
       freeze = ff;
       errorsRead = true;
-      await _saveReport(SavedReport(now.millisecondsSinceEpoch, 'Полная диагностика', analysis.score, text));
+      final traces = <String, List<double>>{};
+      for (final p in [0x14, 0x06, 0x07]) {
+        final h = hist[p];
+        if (h != null && h.isNotEmpty) traces[pidName(p)] = List<double>.from(h);
+      }
+      await _saveReport(SavedReport(now.millisecondsSinceEpoch, 'Полная диагностика', analysis.score, text,
+          codes: [...st, ...pe],
+          findings: analysis.findings.map((f) => f.title).toList(),
+          vehicle: vehicle,
+          odometerKm: vehicleInfo?.odometerKm,
+          traces: traces));
       _stage('Готово', 1);
       if (voice) _speaker.say(phraseFor(res));
+      if (analysis.findings.any((f) => f.severity == 3)) {
+        HapticFeedback.heavyImpact();
+        SystemSound.play(SystemSoundType.alert);
+      }
     } catch (e) {
       _lost(e);
     } finally {
       scanning = false;
+      notifyListeners();
+    }
+  }
+
+  // ---------- настройки и обслуживание ----------
+
+  void setBigText(bool v) {
+    bigText = v;
+    SharedPreferences.getInstance().then((p) => p.setBool('bigText', v));
+    notifyListeners();
+  }
+
+  Future<void> markServiceDone(int i) async {
+    final km = vehicleInfo?.odometerKm;
+    if (km == null) {
+      info = 'Пробег неизвестен: отметьте ТО, когда ЭБУ передаст пробег';
+      notifyListeners();
+      return;
+    }
+    services = List<ServiceItem>.from(services)..[i] = services[i].withLast(km);
+    final p = await SharedPreferences.getInstance();
+    await p.setString('services', jsonEncode(services.map((x) => x.toJson()).toList()));
+    notifyListeners();
+  }
+
+  /// 20 запросов к адаптеру: удачные ответы, время ответа, напряжение
+  Future<void> checkAdapter() async {
+    final c = _client;
+    if (c == null || checkingAdapter || scanning || working) return;
+    liveOn = false;
+    checkingAdapter = true;
+    adapterCheck = null;
+    notifyListeners();
+    final times = <int>[];
+    var bad = 0;
+    try {
+      for (var i = 0; i < 20; i++) {
+        final sw = Stopwatch()..start();
+        final r = await c.raw('0100', timeoutMs: 3000);
+        sw.stop();
+        if (r.contains('4100')) {
+          times.add(sw.elapsedMilliseconds);
+        } else {
+          bad++;
+        }
+      }
+      final volt = await c.readVoltage();
+      final avg = times.isEmpty ? 0 : times.reduce((a, b) => a + b) ~/ times.length;
+      final mx = times.isEmpty ? 0 : times.reduce((a, b) => a > b ? a : b);
+      final stable = bad <= 2 && avg < 400;
+      adapterCheck = [
+        'Версия адаптера: ${adapter?.version ?? '—'}',
+        'Удачных ответов: ${times.length} из 20, без ответа: $bad',
+        'Среднее время ответа: $avg мс, максимум: $mx мс',
+        if (volt != null) 'Напряжение на разъёме: ${volt.toStringAsFixed(1)} В',
+        stable
+            ? 'Связь стабильная. Можно диагностировать и смотреть датчики.'
+            : 'Связь нестабильная: проверьте адаптер, плотность его вставки и Bluetooth-соединение.',
+        'Строку версии клоны часто подделывают, поэтому судите по стабильности связи.',
+      ].join('\n');
+    } catch (e) {
+      adapterCheck = 'Проверка прервана: $e';
+    } finally {
+      checkingAdapter = false;
       notifyListeners();
     }
   }

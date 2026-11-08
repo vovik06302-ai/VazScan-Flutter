@@ -14,13 +14,17 @@ class VazApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'VAZ Scan',
-      debugShowCheckedModeBanner: false,
-      theme: vazTheme(),
-      home: ListenableBuilder(
-        listenable: app,
-        builder: (context, _) => HomeShell(app: app),
+    return ListenableBuilder(
+      listenable: app,
+      builder: (context, _) => MaterialApp(
+        title: 'VAZ Scan',
+        debugShowCheckedModeBanner: false,
+        theme: vazTheme(),
+        builder: (ctx, child) => MediaQuery(
+          data: MediaQuery.of(ctx).copyWith(textScaler: TextScaler.linear(app.bigText ? 1.3 : 1.0)),
+          child: child ?? const SizedBox.shrink(),
+        ),
+        home: HomeShell(app: app),
       ),
     );
   }

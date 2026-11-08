@@ -94,6 +94,10 @@ class LiveScreen extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.all(10),
       children: [
+        Row(children: [
+          const Expanded(child: Text('Крупный шрифт')),
+          Switch(value: app.bigText, onChanged: app.setBigText),
+        ]),
         FilledButton.icon(
           onPressed: canStart
               ? () {

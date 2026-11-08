@@ -1,4 +1,4 @@
-﻿name: vazscan
+name: vazscan
 description: VAZ Scan - диагностика автомобиля через ELM327
 publish_to: none
 version: 1.0.0+1
@@ -16,6 +16,7 @@ dependencies:
   path_provider: 2.1.4
   open_filex: 4.5.0
   package_info_plus: 8.0.2
+  pdf: 3.11.1
 
 flutter:
   uses-material-design: true

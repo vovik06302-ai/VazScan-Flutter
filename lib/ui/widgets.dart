@@ -438,10 +438,32 @@ class ReadinessPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final total = r.items.length;
+    final done = r.items.where((i) => i.complete).length;
     return Panel(
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text(r.milOn ? 'Лампа Check Engine: ГОРИТ' : 'Лампа Check Engine: не горит',
-            style: TextStyle(fontWeight: FontWeight.bold, color: r.milOn ? alarmColor : okColor)),
+        Row(children: [
+          SizedBox(
+            width: 64,
+            height: 64,
+            child: Stack(alignment: Alignment.center, children: [
+              CircularProgressIndicator(
+                value: total == 0 ? 0 : done / total,
+                strokeWidth: 6,
+                color: done == total ? okColor : warnColor,
+                backgroundColor: const Color(0xFF2E4A66),
+              ),
+              Text('$done/$total', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+            ]),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              r.milOn ? 'Лампа Check Engine: ГОРИТ' : 'Лампа Check Engine: не горит',
+              style: TextStyle(fontWeight: FontWeight.bold, color: r.milOn ? alarmColor : okColor),
+            ),
+          ),
+        ]),
         Text('Кодов по данным ЭБУ: ${r.dtcCount}'),
         if (r.items.isNotEmpty) ...[
           const SizedBox(height: 6),

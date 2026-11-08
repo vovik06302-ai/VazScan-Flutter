@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../app_state.dart';
+import '../service.dart';
 import '../theme.dart';
 import 'widgets.dart';
 
@@ -60,6 +61,26 @@ class _ConnectScreenState extends State<ConnectScreen> {
           const SizedBox(height: 8),
           VehicleCardW(v: app.vehicleInfo!),
         ],
+        const SectionTitle('Проверка адаптера'),
+        Panel(
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            OutlinedButton(
+              onPressed: (app.connected && !app.checkingAdapter && !app.scanning && !app.working) ? app.checkAdapter : null,
+              child: Text(app.checkingAdapter ? 'Проверка… около 10 секунд' : 'Проверить связь с адаптером'),
+            ),
+            if (app.adapterCheck != null)
+              Padding(padding: const EdgeInsets.only(top: 8), child: SelectableText(app.adapterCheck!)),
+          ]),
+        ),
+        const SectionTitle('Напоминания по ТО'),
+        Panel(
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            if (app.vehicleInfo?.odometerKm == null)
+              const Text('Пробег пока не получен: остаток покажется, когда ЭБУ его передаст.',
+                  style: TextStyle(color: dimText, fontSize: 12)),
+            for (var i = 0; i < app.services.length; i++) _serviceRow(app, i),
+          ]),
+        ),
         const SectionTitle('Адаптер ELM327'),
         Row(children: [
           Expanded(
@@ -163,4 +184,36 @@ class _ConnectScreenState extends State<ConnectScreen> {
       ],
     );
   }
+}
+
+Widget _serviceRow(AppState app, int i) {
+  final s = app.services[i];
+  final km = app.vehicleInfo?.odometerKm;
+  final rem = km == null ? null : s.remaining(km);
+  final String text;
+  if (s.lastKm == null) {
+    text = 'ещё не отмечалось, интервал ${s.intervalKm} км';
+  } else if (rem == null) {
+    text = 'интервал ${s.intervalKm} км';
+  } else if (rem >= 0) {
+    text = 'осталось ${rem.toStringAsFixed(0)} км';
+  } else {
+    text = 'просрочено на ${(-rem).toStringAsFixed(0)} км';
+  }
+  final Color? color = rem == null ? null : (rem < 0 ? alarmColor : (rem < 1000 ? warnColor : null));
+  return Padding(
+    padding: const EdgeInsets.symmetric(vertical: 4),
+    child: Row(children: [
+      Expanded(
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text(s.name, style: const TextStyle(fontWeight: FontWeight.bold)),
+          Text(text, style: TextStyle(color: color ?? dimText, fontSize: 13)),
+        ]),
+      ),
+      TextButton(
+        onPressed: km == null ? null : () => app.markServiceDone(i),
+        child: const Text('Сделано'),
+      ),
+    ]),
+  );
 }

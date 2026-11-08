@@ -1,4 +1,5 @@
 import 'dtc_raw.dart';
+import 'dtc_extra.dart';
 
 class DtcInfo {
   final String code;
@@ -21,7 +22,7 @@ class DtcDb {
 
   static Map<String, DtcInfo> _build() {
     final m = <String, DtcInfo>{};
-    for (final line in dtcRaw.split('\n')) {
+    for (final line in '$dtcRaw\n$dtcRawExtra'.split('\n')) {
       if (line.trim().isEmpty) continue;
       final p = line.split('|');
       if (p.length < 5) continue;

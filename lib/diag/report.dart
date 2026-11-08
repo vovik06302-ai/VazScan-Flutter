@@ -13,6 +13,7 @@ String buildReport({
   required DateTime time,
   required String vehicle,
   String? vin,
+  double? odometerKm,
   AdapterInfo? adapter,
   required List<String> stored,
   required List<String> pending,
@@ -28,6 +29,7 @@ String buildReport({
   sb.writeln('Дата: ${fmtDate(time)}');
   sb.writeln('Автомобиль: $vehicle');
   if (vin != null && vin.isNotEmpty) sb.writeln('VIN: $vin');
+  if (odometerKm != null) sb.writeln('Пробег: ${odometerKm.toStringAsFixed(0)} км');
   if (adapter != null) sb.writeln('Адаптер: ${adapter.version}, протокол: ${adapter.protocol}');
   if (analysis != null) {
     sb.writeln();
