@@ -14,6 +14,16 @@ class Speaker {
     } catch (_) {}
   }
 
+  /// Есть ли русский голос на телефоне. Без него приложение молчит.
+  Future<bool> russianReady() async {
+    try {
+      final r = await _tts.isLanguageAvailable('ru-RU');
+      return r == true || r == 1;
+    } catch (_) {
+      return false;
+    }
+  }
+
   void say(String text) {
     if (!enabled) return;
     _tts.speak(text);

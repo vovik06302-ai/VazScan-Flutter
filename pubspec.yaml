@@ -18,5 +18,9 @@ dependencies:
   package_info_plus: 8.0.2
   pdf: 3.11.1
 
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
 flutter:
   uses-material-design: true

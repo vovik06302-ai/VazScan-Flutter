@@ -59,6 +59,15 @@ class AlarmBanner extends StatelessWidget {
       );
     }
     return Column(children: [
+      if (alarms.any((a) => a.level >= 2))
+        const Card(
+          color: Color(0x33EF5350),
+          child: Padding(
+            padding: EdgeInsets.all(10),
+            child: Text('КРАСНАЯ ТРЕВОГА: не ехать. Остановитесь в безопасном месте и проверьте причину.',
+                style: TextStyle(color: alarmColor, fontWeight: FontWeight.bold)),
+          ),
+        ),
       for (final a in alarms)
         Card(
           color: levelColor(a.level).withOpacity(0.15),

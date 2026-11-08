@@ -117,6 +117,7 @@ class AppState extends ChangeNotifier {
   bool bigText = false;
   List<ServiceItem> services = List<ServiceItem>.from(defaultServices);
   bool checkingAdapter = false;
+  bool voiceReady = true;
   String? adapterCheck;
   File? _repairFile;
 
@@ -139,6 +140,7 @@ class AppState extends ChangeNotifier {
     final pi = await PackageInfo.fromPlatform();
     version = pi.version;
     await _speaker.init();
+    voiceReady = await _speaker.russianReady();
     final base = await getApplicationDocumentsDirectory();
     _reportsDir = Directory('${base.path}/reports')..createSync(recursive: true);
     _repairFile = File('${base.path}/repairs.json');
@@ -356,6 +358,7 @@ class AppState extends ChangeNotifier {
     liveOn = true;
     notifyListeners();
     final pids = dashPids;
+    var empty = 0;
     while (liveOn && connected) {
       final m = <int, double>{};
       try {
@@ -367,6 +370,15 @@ class AppState extends ChangeNotifier {
       } catch (e) {
         _lost(e);
         break;
+      }
+      if (m.isEmpty) {
+        empty++;
+        if (empty >= 8) {
+          _lost('адаптер не отвечает на запросы опроса');
+          break;
+        }
+      } else {
+        empty = 0;
       }
       live = {...live, ...m};
       m.forEach((p, v) {

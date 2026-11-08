@@ -46,6 +46,12 @@ class ScanScreen extends StatelessWidget {
             ),
           ]),
         ),
+        if (!app.voiceReady && app.voice)
+          const Padding(
+            padding: EdgeInsets.only(top: 6),
+            child: Text('Русский голос не найден на телефоне. Настройки → Синтез речи → Google → '
+                'Установка голосовых данных → Русский.', style: TextStyle(color: warnColor, fontSize: 12)),
+          ),
         if (r != null) ...[
           const SizedBox(height: 8),
           ScoreRing(score: r.analysis.score, verdict: r.analysis.verdict),
