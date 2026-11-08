@@ -59,10 +59,10 @@ class _HistoryScreenState extends State<HistoryScreen> {
           height: 480,
           child: SingleChildScrollView(
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              SelectableText(r.text, style: const TextStyle(fontFamily: 'monospace', fontSize: 12)),
+              SelectableText(r.text, style: TextStyle(fontFamily: 'monospace', fontSize: 12)),
               for (final e in r.traces.entries) ...[
-                const SizedBox(height: 10),
-                Text(e.key, style: const TextStyle(fontWeight: FontWeight.bold)),
+                SizedBox(height: 10),
+                Text(e.key, style: TextStyle(fontWeight: FontWeight.bold)),
                 SizedBox(
                   height: 110,
                   child: ScopeView(
@@ -84,20 +84,20 @@ class _HistoryScreenState extends State<HistoryScreen> {
               app.deleteReport(r);
               Navigator.pop(ctx);
             },
-            child: const Text('Удалить'),
+            child: Text('Удалить'),
           ),
           TextButton(
             onPressed: () async {
               final path = await buildPdf(r);
               await OpenFilex.open(path, type: 'application/pdf');
             },
-            child: const Text('PDF'),
+            child: Text('PDF'),
           ),
           TextButton(
             onPressed: () => Clipboard.setData(ClipboardData(text: r.text)),
-            child: const Text('Копировать'),
+            child: Text('Копировать'),
           ),
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Закрыть')),
+          TextButton(onPressed: () => Navigator.pop(ctx), child: Text('Закрыть')),
         ],
       ),
     );
@@ -107,8 +107,8 @@ class _HistoryScreenState extends State<HistoryScreen> {
     return Padding(
       padding: const EdgeInsets.only(top: 8),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
-        if (items.isEmpty) const Text('нет', style: TextStyle(color: dimText)),
+        Text(title, style: TextStyle(fontWeight: FontWeight.bold)),
+        if (items.isEmpty) Text('нет', style: TextStyle(color: dimText)),
         for (final i in items) Text('• $i'),
       ]),
     );
@@ -130,21 +130,21 @@ class _HistoryScreenState extends State<HistoryScreen> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Сравнение'),
+        title: Text('Сравнение'),
         content: SingleChildScrollView(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Text('Было: ${fmtDate(DateTime.fromMillisecondsSinceEpoch(a.id))}'),
             Text('Стало: ${fmtDate(DateTime.fromMillisecondsSinceEpoch(b.id))}'),
             if (odoText != null) Text(odoText),
-            const SizedBox(height: 8),
-            Text(scoreText, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+            SizedBox(height: 8),
+            Text(scoreText, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
             _block('Пропали ошибки', c.removedCodes),
             _block('Появились ошибки', c.addedCodes),
             _block('Устранённые проблемы', c.fixedProblems),
             _block('Новые проблемы', c.newProblems),
           ]),
         ),
-        actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Закрыть'))],
+        actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: Text('Закрыть'))],
       ),
     );
   }
@@ -156,16 +156,16 @@ class _HistoryScreenState extends State<HistoryScreen> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Новый ремонт'),
+        title: Text('Новый ремонт'),
         content: SingleChildScrollView(
           child: Column(mainAxisSize: MainAxisSize.min, children: [
-            TextField(controller: title, decoration: const InputDecoration(labelText: 'Что сделали, например «Заменил ДМРВ»')),
-            TextField(controller: note, decoration: const InputDecoration(labelText: 'Комментарий')),
-            TextField(controller: codes, decoration: const InputDecoration(labelText: 'Коды, которые устранили (через запятую)')),
+            TextField(controller: title, decoration: InputDecoration(labelText: 'Что сделали, например «Заменил ДМРВ»')),
+            TextField(controller: note, decoration: InputDecoration(labelText: 'Комментарий')),
+            TextField(controller: codes, decoration: InputDecoration(labelText: 'Коды, которые устранили (через запятую)')),
           ]),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Отмена')),
+          TextButton(onPressed: () => Navigator.pop(ctx), child: Text('Отмена')),
           FilledButton(
             onPressed: () {
               final t = title.text.trim();
@@ -175,7 +175,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
               }
               Navigator.pop(ctx);
             },
-            child: const Text('Сохранить'),
+            child: Text('Сохранить'),
           ),
         ],
       ),
@@ -187,7 +187,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
     if (vehicles.length < 2) return const SizedBox.shrink();
     return Wrap(spacing: 6, runSpacing: 6, children: [
       ChoiceChip(
-        label: const Text('Все'),
+        label: Text('Все'),
         selected: _filter == null,
         onSelected: (_) => setState(() => _filter = null),
       ),
@@ -207,15 +207,15 @@ class _HistoryScreenState extends State<HistoryScreen> {
       padding: const EdgeInsets.all(12),
       children: [
         Row(children: [
-          const Expanded(child: SectionTitle('Журнал ремонтов')),
-          IconButton(onPressed: _addRepair, icon: const Icon(Icons.add_circle, color: vazCyan)),
+          Expanded(child: SectionTitle('Журнал ремонтов')),
+          IconButton(onPressed: _addRepair, icon: Icon(Icons.add_circle, color: Theme.of(context).colorScheme.primary)),
         ]),
         if (app.repairs.isEmpty)
-          const Panel(child: Text('Записей нет. Нажмите «+», чтобы записать ремонт и коды, которые он устранил.')),
+          Panel(child: Text('Записей нет. Нажмите «+», чтобы записать ремонт и коды, которые он устранил.')),
         for (final RepairEntry r in app.repairs)
           Card(
             child: ListTile(
-              title: Text(r.title, style: const TextStyle(fontWeight: FontWeight.bold)),
+              title: Text(r.title, style: TextStyle(fontWeight: FontWeight.bold)),
               subtitle: Text([
                 fmtDate(DateTime.fromMillisecondsSinceEpoch(r.id)),
                 if (r.codes.isNotEmpty) 'коды: ${r.codes.join(', ')}',
@@ -223,27 +223,27 @@ class _HistoryScreenState extends State<HistoryScreen> {
               ].join('\n')),
               isThreeLine: true,
               trailing: IconButton(
-                icon: const Icon(Icons.delete_outline),
+                icon: Icon(Icons.delete_outline),
                 onPressed: () => app.deleteRepair(r),
               ),
             ),
           ),
-        const SectionTitle('Диагностики'),
+        SectionTitle('Диагностики'),
         _filters(),
-        const SizedBox(height: 8),
+        SizedBox(height: 8),
         if (_sel.length == 2)
           FilledButton.icon(
             onPressed: _compare,
-            icon: const Icon(Icons.compare_arrows),
-            label: const Text('Сравнить выбранные'),
+            icon: Icon(Icons.compare_arrows),
+            label: Text('Сравнить выбранные'),
           ),
         if (_sel.isNotEmpty && _sel.length < 2)
-          const Padding(
+          Padding(
             padding: EdgeInsets.only(bottom: 4),
             child: Text('Отметьте ещё одну диагностику, чтобы сравнить.', style: TextStyle(color: dimText, fontSize: 12)),
           ),
         if (list.isEmpty)
-          const Panel(child: Text('История пуста. Отчёты появятся после диагностики.')),
+          Panel(child: Text('История пуста. Отчёты появятся после диагностики.')),
         for (final r in list)
           Card(
             child: ListTile(
@@ -251,7 +251,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                 value: _sel.contains(r.id),
                 onChanged: r.score >= 0 ? (_) => _toggle(r) : null,
               ),
-              title: Text(r.title, style: const TextStyle(fontWeight: FontWeight.bold)),
+              title: Text(r.title, style: TextStyle(fontWeight: FontWeight.bold)),
               subtitle: Text([
                 fmtDate(DateTime.fromMillisecondsSinceEpoch(r.id)),
                 if (r.vehicle.isNotEmpty) r.vehicle,

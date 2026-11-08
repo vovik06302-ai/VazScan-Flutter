@@ -23,7 +23,7 @@ class SectionTitle extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Padding(
         padding: const EdgeInsets.fromLTRB(4, 14, 4, 4),
-        child: Text(text, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: vazCyan)),
+        child: Text(text, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.primary)),
       );
 }
 
@@ -47,12 +47,12 @@ class AlarmBanner extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (!live) {
-      return const Panel(child: Text('Опрос остановлен. Нажмите «Запустить опрос», чтобы видеть состояние в реальном времени.'));
+      return Panel(child: Text('Опрос остановлен. Нажмите «Запустить опрос», чтобы видеть состояние в реальном времени.'));
     }
     if (alarms.isEmpty) {
       return Card(
         color: okColor.withOpacity(0.15),
-        child: const Padding(
+        child: Padding(
           padding: EdgeInsets.all(12),
           child: Text('Всё в норме', style: TextStyle(color: okColor, fontWeight: FontWeight.bold, fontSize: 16)),
         ),
@@ -60,7 +60,7 @@ class AlarmBanner extends StatelessWidget {
     }
     return Column(children: [
       if (alarms.any((a) => a.level >= 2))
-        const Card(
+        Card(
           color: Color(0x33EF5350),
           child: Padding(
             padding: EdgeInsets.all(10),
@@ -76,7 +76,7 @@ class AlarmBanner extends StatelessWidget {
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Text('${a.level >= 2 ? 'ТРЕВОГА' : 'ВНИМАНИЕ'}: ${a.name}',
                   style: TextStyle(color: levelColor(a.level), fontWeight: FontWeight.bold)),
-              Text(a.text, style: const TextStyle(fontSize: 13)),
+              Text(a.text, style: TextStyle(fontSize: 13)),
             ]),
           ),
         ),
@@ -108,7 +108,7 @@ class GaugeDial extends StatelessWidget {
     final v = value;
     final frac = v == null ? 0.0 : ((v - min) / (max - min)).clamp(0.0, 1.0).toDouble();
     return Column(children: [
-      Text(title, textAlign: TextAlign.center, style: const TextStyle(fontSize: 13)),
+      Text(title, textAlign: TextAlign.center, style: TextStyle(fontSize: 13)),
       AspectRatio(
         aspectRatio: 1.1,
         child: CustomPaint(painter: _DialPainter(frac, color, v != null)),
@@ -117,7 +117,7 @@ class GaugeDial extends StatelessWidget {
         v == null ? '—' : v.toStringAsFixed(dec),
         style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: v == null ? Colors.grey : color),
       ),
-      Text(unit, style: const TextStyle(fontSize: 12, color: dimText)),
+      Text(unit, style: TextStyle(fontSize: 12, color: dimText)),
     ]);
   }
 }
@@ -141,7 +141,7 @@ class _DialPainter extends CustomPainter {
       ..style = PaintingStyle.stroke
       ..strokeWidth = stroke
       ..strokeCap = StrokeCap.round
-      ..color = const Color(0xFF2E4A66);
+      ..color = Color(0xFF2E4A66);
     canvas.drawArc(rect, _rad(135), _rad(270), false, track);
     if (hasValue) {
       final arc = Paint()
@@ -194,12 +194,12 @@ class ScopeView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Card(
-      color: const Color(0xFF0B1410),
+      color: Color(0xFF0B1410),
       child: Padding(
         padding: const EdgeInsets.all(8),
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           Row(children: [
-            Expanded(child: Text(title, style: const TextStyle(color: dimText, fontSize: 13))),
+            Expanded(child: Text(title, style: TextStyle(color: dimText, fontSize: 13))),
             Text(valueText, style: TextStyle(color: levelColor(level), fontWeight: FontWeight.bold, fontSize: 18)),
           ]),
           SizedBox(
@@ -222,7 +222,7 @@ class _ScopePainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final grid = Paint()
-      ..color = const Color(0x3300E676)
+      ..color = Color(0x3300E676)
       ..strokeWidth = 1;
     for (var i = 1; i <= 3; i++) {
       final y = size.height * i / 4;
@@ -236,7 +236,7 @@ class _ScopePainter extends CustomPainter {
       final y = size.height * (1 - (0 - min) / (max - min));
       canvas.drawLine(Offset(0, y), Offset(size.width, y),
           Paint()
-            ..color = const Color(0x8800E676)
+            ..color = Color(0x8800E676)
             ..strokeWidth = 2);
     }
     if (data.length >= 2) {
@@ -284,12 +284,12 @@ class PidTile extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.all(10),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(def.name, style: const TextStyle(fontSize: 12), maxLines: 2, overflow: TextOverflow.ellipsis),
+          Text(def.name, style: TextStyle(fontSize: 12), maxLines: 2, overflow: TextOverflow.ellipsis),
           Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
             Text(value == null ? '—' : fmtPid(def, value!),
                 style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: color)),
-            const SizedBox(width: 4),
-            Text(def.unit, style: const TextStyle(fontSize: 12, color: dimText)),
+            SizedBox(width: 4),
+            Text(def.unit, style: TextStyle(fontSize: 12, color: dimText)),
           ]),
         ]),
       ),
@@ -309,18 +309,18 @@ class DtcTile extends StatelessWidget {
     return Card(
       child: ExpansionTile(
         leading: Dot(color: sevColor(info.severity)),
-        title: Text('$code  ${info.title}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-        subtitle: Text(kind, style: const TextStyle(color: dimText, fontSize: 12)),
+        title: Text('$code  ${info.title}', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+        subtitle: Text(kind, style: TextStyle(color: dimText, fontSize: 12)),
         childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
         expandedCrossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Что было в момент ошибки', style: TextStyle(fontWeight: FontWeight.bold)),
+          Text('Что было в момент ошибки', style: TextStyle(fontWeight: FontWeight.bold)),
           for (final l in FaultContext.explain(code, freeze)) Text('• $l'),
-          const SizedBox(height: 8),
-          const Text('Возможные причины', style: TextStyle(fontWeight: FontWeight.bold)),
+          SizedBox(height: 8),
+          Text('Возможные причины', style: TextStyle(fontWeight: FontWeight.bold)),
           for (var i = 0; i < info.causes.length; i++) Text('${i + 1}. ${info.causes[i]}'),
-          const SizedBox(height: 8),
-          const Text('Что делать', style: TextStyle(fontWeight: FontWeight.bold)),
+          SizedBox(height: 8),
+          Text('Что делать', style: TextStyle(fontWeight: FontWeight.bold)),
           for (final s in info.steps) Text('• $s'),
         ],
       ),
@@ -340,10 +340,10 @@ class FindingTile extends StatelessWidget {
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Row(children: [
             Dot(color: sevColor(x.severity)),
-            const SizedBox(width: 8),
-            Expanded(child: Text(x.title, style: const TextStyle(fontWeight: FontWeight.bold))),
+            SizedBox(width: 8),
+            Expanded(child: Text(x.title, style: TextStyle(fontWeight: FontWeight.bold))),
           ]),
-          const SizedBox(height: 4),
+          SizedBox(height: 4),
           Text(x.details),
           for (final a in x.actions) Text('• $a'),
         ]),
@@ -370,12 +370,12 @@ class ScoreRing extends StatelessWidget {
               value: score / 100,
               strokeWidth: 8,
               color: col,
-              backgroundColor: const Color(0xFF2E4A66),
+              backgroundColor: Color(0xFF2E4A66),
             ),
             Text('$score', style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: col)),
           ]),
         ),
-        const SizedBox(width: 16),
+        SizedBox(width: 16),
         Expanded(child: Text(verdict, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: col))),
       ]),
     );
@@ -390,14 +390,14 @@ class VehicleCardW extends StatelessWidget {
   Widget build(BuildContext context) {
     return Panel(
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text(v.displayName, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: vazCyan)),
+        Text(v.displayName, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.primary)),
         if (v.engine != null) Text('Двигатель: ${v.engine}'),
         if (v.country != null) Text('Страна производства: ${v.country}'),
         Text('Пробег: ${v.odometerKm == null ? 'ЭБУ не передаёт' : '${v.odometerKm!.toStringAsFixed(0)} км'}'),
         if (v.vin != null) Text('VIN: ${v.vin}'),
         Text('ЭБУ: ${v.ecuName ?? 'не определён'}'),
         if (v.calibrationId != null) Text('Калибровка: ${v.calibrationId}'),
-        for (final n in v.notes) Text(n, style: const TextStyle(color: warnColor, fontSize: 12)),
+        for (final n in v.notes) Text(n, style: TextStyle(color: warnColor, fontSize: 12)),
       ]),
     );
   }
@@ -425,15 +425,15 @@ class CoverageCardW extends StatelessWidget {
   Widget build(BuildContext context) {
     return Panel(
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        const Text('Что видит адаптер', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-        const Text('Зелёный — читается, оранжевый — частично, серый — стандарт не передаёт, красный — ошибка',
+        Text('Что видит адаптер', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        Text('Зелёный — читается, оранжевый — частично, серый — стандарт не передаёт, красный — ошибка',
             style: TextStyle(fontSize: 12, color: dimText)),
         for (final c in coverageList(sup, stored))
           Padding(
             padding: const EdgeInsets.only(top: 6),
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Text(c.name, style: TextStyle(color: _col(c.state), fontWeight: FontWeight.bold)),
-              Text(c.note, style: const TextStyle(fontSize: 12)),
+              Text(c.note, style: TextStyle(fontSize: 12)),
             ]),
           ),
       ]),
@@ -460,12 +460,12 @@ class ReadinessPanel extends StatelessWidget {
                 value: total == 0 ? 0 : done / total,
                 strokeWidth: 6,
                 color: done == total ? okColor : warnColor,
-                backgroundColor: const Color(0xFF2E4A66),
+                backgroundColor: Color(0xFF2E4A66),
               ),
-              Text('$done/$total', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+              Text('$done/$total', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
             ]),
           ),
-          const SizedBox(width: 12),
+          SizedBox(width: 12),
           Expanded(
             child: Text(
               r.milOn ? 'Лампа Check Engine: ГОРИТ' : 'Лампа Check Engine: не горит',
@@ -475,8 +475,8 @@ class ReadinessPanel extends StatelessWidget {
         ]),
         Text('Кодов по данным ЭБУ: ${r.dtcCount}'),
         if (r.items.isNotEmpty) ...[
-          const SizedBox(height: 6),
-          const Text('Готовность систем', style: TextStyle(fontWeight: FontWeight.bold)),
+          SizedBox(height: 6),
+          Text('Готовность систем', style: TextStyle(fontWeight: FontWeight.bold)),
           for (final i in r.items)
             Text('${i.complete ? '✓' : '✗'} ${i.name}',
                 style: TextStyle(color: i.complete ? okColor : warnColor, fontSize: 14)),
@@ -495,12 +495,121 @@ class FreezeCard extends StatelessWidget {
     return Panel(
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Text('Стоп-кадр${f.dtc != null ? ' (код ${f.dtc})' : ''}',
-            style: const TextStyle(fontWeight: FontWeight.bold)),
-        const Text('Состояние двигателя в момент появления ошибки', style: TextStyle(fontSize: 12, color: dimText)),
+            style: TextStyle(fontWeight: FontWeight.bold)),
+        Text('Состояние двигателя в момент появления ошибки', style: TextStyle(fontSize: 12, color: dimText)),
         for (final e in f.values.entries)
           if (pidById[e.key] != null)
             Text('${pidById[e.key]!.name}: ${fmtPid(pidById[e.key]!, e.value)} ${pidById[e.key]!.unit}'),
       ]),
     );
+  }
+}
+
+/// Выбор стиля прибора: 0 - стрелка, 1 - цифры, 2 - полоса
+Widget buildGauge({
+  required int style,
+  required String title,
+  required String unit,
+  required double? value,
+  required double min,
+  required double max,
+  required int dec,
+  required Color color,
+}) {
+  switch (style) {
+    case 1:
+      return DigitalGauge(title: title, unit: unit, value: value, min: min, max: max, dec: dec, color: color);
+    case 2:
+      return BarGauge(title: title, unit: unit, value: value, min: min, max: max, dec: dec, color: color);
+    default:
+      return GaugeDial(title: title, unit: unit, value: value, min: min, max: max, dec: dec, color: color);
+  }
+}
+
+class DigitalGauge extends StatelessWidget {
+  final String title;
+  final String unit;
+  final double? value;
+  final double min;
+  final double max;
+  final int dec;
+  final Color color;
+  const DigitalGauge({
+    super.key,
+    required this.title,
+    required this.unit,
+    required this.value,
+    required this.min,
+    required this.max,
+    required this.dec,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final v = value;
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
+      decoration: BoxDecoration(
+        border: Border.all(color: color, width: 2),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Column(children: [
+        Text(title, textAlign: TextAlign.center, style: TextStyle(fontSize: 13)),
+        SizedBox(height: 6),
+        FittedBox(
+          child: Text(
+            v == null ? '—' : v.toStringAsFixed(dec),
+            style: TextStyle(fontSize: 44, fontWeight: FontWeight.bold, color: v == null ? Colors.grey : color),
+          ),
+        ),
+        Text(unit, style: TextStyle(fontSize: 12, color: dimText)),
+      ]),
+    );
+  }
+}
+
+class BarGauge extends StatelessWidget {
+  final String title;
+  final String unit;
+  final double? value;
+  final double min;
+  final double max;
+  final int dec;
+  final Color color;
+  const BarGauge({
+    super.key,
+    required this.title,
+    required this.unit,
+    required this.value,
+    required this.min,
+    required this.max,
+    required this.dec,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final v = value;
+    final frac = v == null ? 0.0 : ((v - min) / (max - min)).clamp(0.0, 1.0).toDouble();
+    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      Text(title, textAlign: TextAlign.center, style: TextStyle(fontSize: 13)),
+      SizedBox(height: 10),
+      ClipRRect(
+        borderRadius: BorderRadius.circular(8),
+        child: LinearProgressIndicator(
+          value: frac,
+          minHeight: 20,
+          color: color,
+          backgroundColor: Color(0xFF2E4A66),
+        ),
+      ),
+      SizedBox(height: 8),
+      Text(
+        v == null ? '—' : '${v.toStringAsFixed(dec)} $unit',
+        textAlign: TextAlign.center,
+        style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: v == null ? Colors.grey : color),
+      ),
+    ]);
   }
 }

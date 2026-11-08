@@ -57,8 +57,8 @@ class _HomeShellState extends State<HomeShell> {
         foregroundColor: Colors.white,
         backgroundColor: Colors.transparent,
         elevation: 0,
-        flexibleSpace: const DecoratedBox(
-          decoration: BoxDecoration(gradient: LinearGradient(colors: [vazTeal, vazViolet])),
+        flexibleSpace: DecoratedBox(
+          decoration: BoxDecoration(gradient: LinearGradient(colors: [app.accentColor, app.accentDark])),
         ),
       ),
       body: Column(children: [

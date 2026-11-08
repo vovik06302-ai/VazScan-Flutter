@@ -48,7 +48,8 @@ class LiveScreen extends StatelessWidget {
     final v = app.live[g.pid];
     final lvl = v == null ? 0 : levelFor(g.pid, v, running);
     return Panel(
-      child: GaugeDial(
+      child: buildGauge(
+        style: app.gaugeStyle,
         title: g.title,
         unit: g.unit,
         value: v,
@@ -95,7 +96,7 @@ class LiveScreen extends StatelessWidget {
       padding: const EdgeInsets.all(10),
       children: [
         Row(children: [
-          const Expanded(child: Text('Крупный шрифт')),
+          Expanded(child: Text('Крупный шрифт')),
           Switch(value: app.bigText, onChanged: app.setBigText),
         ]),
         FilledButton.icon(
@@ -111,35 +112,35 @@ class LiveScreen extends StatelessWidget {
           icon: Icon(app.liveOn ? Icons.stop : Icons.play_arrow),
           label: Text(app.liveOn ? 'Остановить' : 'Запустить опрос'),
         ),
-        if (!app.connected) const Padding(padding: EdgeInsets.only(top: 8), child: Text('Нет подключения к адаптеру.')),
-        const SizedBox(height: 8),
+        if (!app.connected) Padding(padding: EdgeInsets.only(top: 8), child: Text('Нет подключения к адаптеру.')),
+        SizedBox(height: 8),
         AlarmBanner(alarms: alarms, live: app.liveOn || app.live.isNotEmpty),
-        const SizedBox(height: 8),
+        SizedBox(height: 8),
         CoverageCardW(sup: app.supported, stored: app.stored),
-        const SectionTitle('Приборы'),
+        SectionTitle('Приборы'),
         for (var i = 0; i < _gauges.length; i += 2)
           Row(children: [
             Expanded(child: _gaugeCell(_gauges[i], running)),
-            const SizedBox(width: 8),
-            Expanded(child: i + 1 < _gauges.length ? _gaugeCell(_gauges[i + 1], running) : const SizedBox()),
+            SizedBox(width: 8),
+            Expanded(child: i + 1 < _gauges.length ? _gaugeCell(_gauges[i + 1], running) : SizedBox()),
           ]),
-        const SectionTitle('Осциллографы'),
+        SectionTitle('Осциллографы'),
         for (final s in _scopes)
           Padding(padding: const EdgeInsets.only(bottom: 8), child: _scopeCell(s, running, alarms)),
-        const SectionTitle('Все параметры'),
+        SectionTitle('Все параметры'),
         if (tiles.isEmpty && app.connected)
-          const Panel(child: Text('ЭБУ не сообщил ни об одном поддерживаемом параметре.')),
+          Panel(child: Text('ЭБУ не сообщил ни об одном поддерживаемом параметре.')),
         for (var i = 0; i < tiles.length; i += 2)
           Padding(
             padding: const EdgeInsets.only(bottom: 4),
             child: Row(children: [
               Expanded(child: _tile(tiles[i], running)),
-              const SizedBox(width: 8),
-              Expanded(child: i + 1 < tiles.length ? _tile(tiles[i + 1], running) : const SizedBox()),
+              SizedBox(width: 8),
+              Expanded(child: i + 1 < tiles.length ? _tile(tiles[i + 1], running) : SizedBox()),
             ]),
           ),
-        const SizedBox(height: 12),
-        const Text(
+        SizedBox(height: 12),
+        Text(
           'Обновление около 1–2 раз в секунду: ограничение ELM327 по Bluetooth. Для быстрых осциллограмм нужен профессиональный сканер.',
           style: TextStyle(fontSize: 11, color: dimText),
         ),

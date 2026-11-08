@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:path_provider/path_provider.dart';
@@ -17,6 +18,7 @@ import 'obd/transport.dart';
 import 'obd/vehicle.dart';
 import 'repairs.dart';
 import 'service.dart';
+import 'theme.dart';
 import 'speech.dart';
 import 'updater.dart';
 
@@ -118,6 +120,9 @@ class AppState extends ChangeNotifier {
   List<ServiceItem> services = List<ServiceItem>.from(defaultServices);
   bool checkingAdapter = false;
   bool voiceReady = true;
+  int paletteIndex = 0;
+  int accentIndex = 0;
+  int gaugeStyle = 0;
   String? adapterCheck;
   File? _repairFile;
 
@@ -148,6 +153,10 @@ class AppState extends ChangeNotifier {
     final prefs = await SharedPreferences.getInstance();
     token = prefs.getString('gh_token') ?? '';
     bigText = prefs.getBool('bigText') ?? false;
+    paletteIndex = prefs.getInt('palette') ?? 0;
+    accentIndex = prefs.getInt('accent') ?? 0;
+    gaugeStyle = prefs.getInt('gauge') ?? 0;
+    _applyDim();
     final sv = prefs.getString('services');
     if (sv != null) {
       try {
@@ -582,6 +591,38 @@ class AppState extends ChangeNotifier {
   }
 
   // ---------- настройки и обслуживание ----------
+
+  Palette get palette => palettes[paletteIndex];
+  Color get accentColor => accentColors[accentIndex];
+  Color get accentDark => Color.lerp(accentColor, const Color(0xFF000000), 0.35) ?? accentColor;
+
+  void _applyDim() {
+    dimText = palette.dim;
+  }
+
+  Future<void> _saveInt(String key, int v) async {
+    final p = await SharedPreferences.getInstance();
+    await p.setInt(key, v);
+  }
+
+  void setPalette(int i) {
+    paletteIndex = i;
+    _applyDim();
+    _saveInt('palette', i);
+    notifyListeners();
+  }
+
+  void setAccent(int i) {
+    accentIndex = i;
+    _saveInt('accent', i);
+    notifyListeners();
+  }
+
+  void setGaugeStyle(int i) {
+    gaugeStyle = i;
+    _saveInt('gauge', i);
+    notifyListeners();
+  }
 
   void setBigText(bool v) {
     bigText = v;

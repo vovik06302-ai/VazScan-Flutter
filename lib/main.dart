@@ -19,7 +19,7 @@ class VazApp extends StatelessWidget {
       builder: (context, _) => MaterialApp(
         title: 'VAZ Scan',
         debugShowCheckedModeBanner: false,
-        theme: vazTheme(),
+        theme: vazTheme(app.palette, app.accentColor),
         builder: (ctx, child) => MediaQuery(
           data: MediaQuery.of(ctx).copyWith(textScaler: TextScaler.linear(app.bigText ? 1.3 : 1.0)),
           child: child ?? const SizedBox.shrink(),
