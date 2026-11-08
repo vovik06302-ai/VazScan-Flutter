@@ -1,0 +1,52 @@
+name: Build and release APK
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.24.5'
+          channel: stable
+          cache: true
+
+      - name: Set version
+        id: ver
+        run: echo "build=$((GITHUB_RUN_NUMBER + 100))" >> "$GITHUB_OUTPUT"
+
+      - name: Generate Android project
+        run: |
+          flutter create --platforms=android --org com.vazscan --project-name app /tmp/fc
+          cp -r /tmp/fc/android ./android
+          cp -r android_overrides/. android/
+
+      - name: Get packages
+        run: flutter pub get
+
+      - name: Build release APK
+        run: flutter build apk --release --build-name=1.0.${{ steps.ver.outputs.build }} --build-number=${{ steps.ver.outputs.build }}
+
+      - name: Prepare APK
+        run: cp build/app/outputs/flutter-apk/app-release.apk VazScan-${{ steps.ver.outputs.build }}.apk
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v1.0.${{ steps.ver.outputs.build }}
+          name: VAZ Scan 1.0.${{ steps.ver.outputs.build }}
+          files: VazScan-${{ steps.ver.outputs.build }}.apk
+          body: Автоматическая сборка из main.
