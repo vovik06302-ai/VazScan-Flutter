@@ -18,6 +18,7 @@ import 'obd/transport.dart';
 import 'obd/vehicle.dart';
 import 'repairs.dart';
 import 'service.dart';
+import 'fuel.dart';
 import 'theme.dart';
 import 'speech.dart';
 import 'updater.dart';
@@ -123,6 +124,7 @@ class AppState extends ChangeNotifier {
   int paletteIndex = 0;
   int accentIndex = 0;
   int gaugeStyle = 0;
+  FuelTracker fuel = FuelTracker();
   String? adapterCheck;
   File? _repairFile;
 
@@ -157,6 +159,11 @@ class AppState extends ChangeNotifier {
     accentIndex = prefs.getInt('accent') ?? 0;
     gaugeStyle = prefs.getInt('gauge') ?? 0;
     _applyDim();
+    fuel = FuelTracker(
+      factor: prefs.getDouble('fuel_factor') ?? 1.0,
+      estSinceRefill: prefs.getDouble('fuel_est') ?? 0,
+      kmSinceRefill: prefs.getDouble('fuel_km') ?? 0,
+    );
     final sv = prefs.getString('services');
     if (sv != null) {
       try {
@@ -390,6 +397,7 @@ class AppState extends ChangeNotifier {
         empty = 0;
       }
       live = {...live, ...m};
+      fuel.update(live[0x10], live[0x0D], live[0x5E], DateTime.now());
       m.forEach((p, v) {
         final h = hist[p] ?? <double>[];
         hist[p] = [...(h.length >= 59 ? h.sublist(h.length - 59) : h), v];
@@ -398,6 +406,7 @@ class AppState extends ChangeNotifier {
       notifyListeners();
     }
     liveOn = false;
+    _saveFuel();
     notifyListeners();
   }
 
@@ -588,6 +597,27 @@ class AppState extends ChangeNotifier {
       scanning = false;
       notifyListeners();
     }
+  }
+
+  // ---------- расход топлива ----------
+
+  Future<void> _saveFuel() async {
+    final p = await SharedPreferences.getInstance();
+    await p.setDouble('fuel_factor', fuel.factor);
+    await p.setDouble('fuel_est', fuel.estSinceRefill);
+    await p.setDouble('fuel_km', fuel.kmSinceRefill);
+  }
+
+  bool refuel(double liters) {
+    final ok = fuel.refuel(liters);
+    _saveFuel();
+    notifyListeners();
+    return ok;
+  }
+
+  void resetFuelTrip() {
+    fuel.resetTrip();
+    notifyListeners();
   }
 
   // ---------- настройки и обслуживание ----------

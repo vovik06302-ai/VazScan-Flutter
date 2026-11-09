@@ -5,6 +5,7 @@ import '../obd/models.dart';
 import '../obd/pids.dart';
 import '../theme.dart';
 import 'widgets.dart';
+import 'fuel_panel.dart';
 
 class _G {
   final int pid;
@@ -116,6 +117,8 @@ class LiveScreen extends StatelessWidget {
         SizedBox(height: 8),
         AlarmBanner(alarms: alarms, live: app.liveOn || app.live.isNotEmpty),
         SizedBox(height: 8),
+        FuelPanel(app: app),
+        const SizedBox(height: 8),
         CoverageCardW(sup: app.supported, stored: app.stored),
         SectionTitle('Приборы'),
         for (var i = 0; i < _gauges.length; i += 2)
