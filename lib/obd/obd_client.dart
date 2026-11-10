@@ -23,6 +23,29 @@ String decodeDtc(int a, int b) {
   return '$t$d1$d2$d3$d4';
 }
 
+/// Протоколы ELM327, которые можно выбрать вручную.
+class ObdProto {
+  final String code; // цифра для ATSP
+  final String name;
+  final String hint;
+  const ObdProto(this.code, this.name, this.hint);
+}
+
+const obdProtocols = <ObdProto>[
+  ObdProto('0', 'Авто', 'Адаптер сам перебирает протоколы'),
+  ObdProto('3', 'ISO 9141-2', 'K-линия: Январь 5.1, 7.2, часть Bosch'),
+  ObdProto('4', 'KWP 5 бод', 'K-линия, медленная инициализация: Bosch MP7.0, M7.9.7'),
+  ObdProto('5', 'KWP быстрый', 'K-линия, быстрая инициализация'),
+  ObdProto('6', 'CAN 11/500', 'Новые блоки (Гранта, Веста и т. п.)'),
+];
+
+String protoName(String code) {
+  for (final p in obdProtocols) {
+    if (p.code == code) return p.name;
+  }
+  return 'Авто';
+}
+
 class ObdClient {
   final ObdTransport t;
   void Function(String)? onLog;
@@ -77,7 +100,7 @@ class ObdClient {
     }
   }
 
-  Future<AdapterInfo> initialize() async {
+  Future<AdapterInfo> initialize({String protocol = '0'}) async {
     final notes = <String>[];
     await raw('ATZ', timeoutMs: 7000);
     final ati = await lines('ATI');
@@ -87,19 +110,28 @@ class ObdClient {
     for (final c in ['ATE0', 'ATL0', 'ATS0', 'ATH0', 'ATAT1']) {
       await lines(c);
     }
-    await lines('ATSP0');
-    var ok = await _probe(25000);
-    if (!ok) {
-      // Старые блоки ВАЗ (K-line) иногда не находятся в авто-режиме
-      for (final p in ['3', '5', '4']) {
-        await lines('ATSP$p');
-        if (await _probe(15000)) {
-          ok = true;
-          break;
+    var ok = false;
+    final manual = protocol != '0';
+    if (manual) {
+      // Ручной выбор: только этот протокол, без перебора.
+      await lines('ATSP$protocol');
+      if (protocol != '6') await lines('ATST64'); // K-линия: ждём ответ ЭБУ до 400 мс
+      ok = await _probe(30000);
+    } else {
+      await lines('ATSP0');
+      ok = await _probe(25000);
+      if (!ok) {
+        // Старые блоки ВАЗ (K-line) иногда не находятся в авто-режиме
+        for (final p in ['3', '5', '4']) {
+          await lines('ATSP$p');
+          if (await _probe(15000)) {
+            ok = true;
+            break;
+          }
         }
       }
+      if (!ok) await lines('ATSP0');
     }
-    if (!ok) await lines('ATSP0');
 
     final dp = await lines('ATDP');
     final proto = (dp.isNotEmpty ? dp.first : '?').replaceFirst('AUTO, ', '');
@@ -112,7 +144,9 @@ class ObdClient {
     if (volt != null && volt < 11.0) {
       notes.add('Напряжение на разъёме OBD низкое (${volt.toStringAsFixed(1)} В). Включите зажигание, проверьте аккумулятор.');
     }
-    if (!ok) {
+    if (!ok && manual) {
+      notes.add('ЭБУ не ответил по протоколу ${protoName(protocol)}. Выберите другой протокол. Если не отвечает ни один, проверьте, что в адаптере разведена K-линия (контакт 7 разъёма OBD).');
+    } else if (!ok) {
       notes.add('ЭБУ не ответил. Включите зажигание и проверьте, что адаптер вставлен до упора. Старые блоки Январь 5.1 / 7.2 поддерживают OBD-II частично.');
     }
     return AdapterInfo(

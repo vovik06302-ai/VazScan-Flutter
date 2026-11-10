@@ -124,6 +124,7 @@ class AppState extends ChangeNotifier {
   int paletteIndex = 0;
   int accentIndex = 0;
   int gaugeStyle = 0;
+  String protocolCode = '0';
   FuelTracker fuel = FuelTracker();
   String? adapterCheck;
   File? _repairFile;
@@ -158,6 +159,7 @@ class AppState extends ChangeNotifier {
     paletteIndex = prefs.getInt('palette') ?? 0;
     accentIndex = prefs.getInt('accent') ?? 0;
     gaugeStyle = prefs.getInt('gauge') ?? 0;
+    protocolCode = prefs.getString('protocol') ?? '0';
     _applyDim();
     fuel = FuelTracker(
       factor: prefs.getDouble('fuel_factor') ?? 1.0,
@@ -274,24 +276,54 @@ class AppState extends ChangeNotifier {
       final c = ObdClient(t)..onLog = _log;
       status = 'Инициализация адаптера (поиск ЭБУ может занять до минуты)…';
       notifyListeners();
-      final ai = await c.initialize();
+      final ai = await c.initialize(protocol: protocolCode);
       _client = c;
       adapter = ai;
       demo = isDemo;
       connected = true;
       status = ai.ecuResponds ? 'Подключено к ЭБУ' : 'Адаптер подключён, ЭБУ не отвечает';
-      if (ai.ecuResponds) {
-        supported = await c.supportedPids();
-        vin = await c.readVin();
-        final odo = await c.readOdometer();
-        final ecu = await c.readMode09Text(0x0A);
-        final cal = await c.readMode09Text(0x04);
-        vehicleInfo = await VinDecoder.build(vin, odo, ecu, cal);
-        vehicle = vehicleInfo!.displayName;
-      }
+      if (ai.ecuResponds) await _readVehicle(c);
     } catch (e) {
       error = 'Ошибка подключения: $e';
       status = 'Не подключено';
+      connected = false;
+      _client = null;
+    } finally {
+      busy = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> _readVehicle(ObdClient c) async {
+    supported = await c.supportedPids();
+    vin = await c.readVin();
+    final odo = await c.readOdometer();
+    final ecu = await c.readMode09Text(0x0A);
+    final cal = await c.readMode09Text(0x04);
+    vehicleInfo = await VinDecoder.build(vin, odo, ecu, cal);
+    vehicle = vehicleInfo!.displayName;
+  }
+
+  /// Выбор протокола. Если адаптер подключён, сразу переподключается к ЭБУ с новым протоколом.
+  Future<void> setProtocol(String code) async {
+    protocolCode = code;
+    SharedPreferences.getInstance().then((p) => p.setString('protocol', code));
+    notifyListeners();
+    final c = _client;
+    if (c == null || demo || busy || scanning || working) return;
+    liveOn = false;
+    busy = true;
+    error = null;
+    status = 'Протокол ${protoName(code)}: поиск ЭБУ (до 30 секунд)…';
+    notifyListeners();
+    try {
+      final ai = await c.initialize(protocol: code);
+      adapter = ai;
+      status = ai.ecuResponds ? 'Подключено к ЭБУ' : 'Адаптер подключён, ЭБУ не отвечает';
+      if (ai.ecuResponds) await _readVehicle(c);
+    } catch (e) {
+      error = 'Ошибка смены протокола: $e';
+      status = 'Связь потеряна';
       connected = false;
       _client = null;
     } finally {

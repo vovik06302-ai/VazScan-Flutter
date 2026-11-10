@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../obd/obd_client.dart';
 import '../app_state.dart';
 import '../service.dart';
 import '../theme.dart';
@@ -61,6 +62,25 @@ class _ConnectScreenState extends State<ConnectScreen> {
           SizedBox(height: 8),
           VehicleCardW(v: app.vehicleInfo!),
         ],
+        SectionTitle('Протокол'),
+        Panel(
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Wrap(spacing: 8, runSpacing: 8, children: [
+              for (final p in obdProtocols)
+                ChoiceChip(
+                  label: Text(p.name),
+                  selected: app.protocolCode == p.code,
+                  onSelected: app.busy ? null : (_) => app.setProtocol(p.code),
+                ),
+            ]),
+            SizedBox(height: 8),
+            Text(obdProtocols.firstWhere((p) => p.code == app.protocolCode, orElse: () => obdProtocols.first).hint,
+                style: TextStyle(color: dimText, fontSize: 12)),
+            SizedBox(height: 4),
+            Text('ВАЗ-2112 8 кл.: сначала ISO 9141-2, затем KWP 5 бод. Если адаптер подключён, поиск ЭБУ запускается сразу после выбора.',
+                style: TextStyle(color: dimText, fontSize: 12)),
+          ]),
+        ),
         SectionTitle('Оформление'),
         Panel(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
