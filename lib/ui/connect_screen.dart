@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../obd/obd_client.dart';
 import '../app_state.dart';
 import '../service.dart';
@@ -79,6 +80,16 @@ class _ConnectScreenState extends State<ConnectScreen> {
             SizedBox(height: 4),
             Text('ВАЗ-2112 8 кл.: сначала ISO 9141-2, затем KWP 5 бод. Если адаптер подключён, поиск ЭБУ запускается сразу после выбора.',
                 style: TextStyle(color: dimText, fontSize: 12)),
+            SizedBox(height: 10),
+            OutlinedButton.icon(
+              onPressed: (app.connected && !app.demo && !app.busy && !app.scanning && !app.working)
+                  ? app.scanProtocols
+                  : null,
+              icon: Icon(Icons.manage_search),
+              label: Text(app.protoScanning ? 'Проверка… до 2 минут' : 'Проверить все протоколы'),
+            ),
+            if (app.protoReport != null)
+              Padding(padding: const EdgeInsets.only(top: 8), child: SelectableText(app.protoReport!)),
           ]),
         ),
         SectionTitle('Оформление'),
@@ -219,6 +230,28 @@ class _ConnectScreenState extends State<ConnectScreen> {
             ),
           ]),
         ),
+        SectionTitle('Журнал обмена'),
+        Row(children: [
+          Expanded(
+            child: FilledButton.icon(
+              onPressed: app.terminal.isEmpty
+                  ? null
+                  : () {
+                      Clipboard.setData(ClipboardData(text: app.logText()));
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Журнал скопирован. Вставьте его в мессенджер')),
+                      );
+                    },
+              icon: Icon(Icons.copy),
+              label: Text('Скопировать журнал'),
+            ),
+          ),
+          SizedBox(width: 8),
+          OutlinedButton(
+            onPressed: app.terminal.isEmpty ? null : app.clearLog,
+            child: Text('Очистить'),
+          ),
+        ]),
         SectionTitle('Терминал (для опытных)'),
         Row(children: [
           Expanded(

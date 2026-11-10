@@ -125,6 +125,8 @@ class AppState extends ChangeNotifier {
   int accentIndex = 0;
   int gaugeStyle = 0;
   String protocolCode = '0';
+  bool protoScanning = false;
+  String? protoReport;
   FuelTracker fuel = FuelTracker();
   String? adapterCheck;
   File? _repairFile;
@@ -330,6 +332,78 @@ class AppState extends ChangeNotifier {
       busy = false;
       notifyListeners();
     }
+  }
+
+  /// Перебирает протоколы K-линии и CAN, строит отчёт и включает первый сработавший.
+  Future<void> scanProtocols() async {
+    final c = _client;
+    if (c == null || demo || busy || scanning || working || protoScanning) return;
+    liveOn = false;
+    protoScanning = true;
+    busy = true;
+    protoReport = null;
+    error = null;
+    notifyListeners();
+    final sb = StringBuffer();
+    String? found;
+    try {
+      final volt = await c.readVoltage();
+      if (volt != null) sb.writeln('Напряжение: ${volt.toStringAsFixed(1)} В');
+      for (final p in obdProtocols.where((x) => x.code != '0')) {
+        status = 'Проверка: ${p.name}…';
+        notifyListeners();
+        final r = await c.tryProtocol(p.code);
+        sb.writeln('${p.name}: ${r.summary}');
+        if (r.ok) {
+          found = p.code;
+          break;
+        }
+      }
+      if (found == null) {
+        sb.writeln('');
+        sb.writeln('ЭБУ не ответил ни по одному протоколу. Проверьте зажигание, посадку адаптера в разъёме и, если адаптер дешёвый, наличие K-линии (контакт 7).');
+      } else {
+        sb.writeln('');
+        sb.writeln('Включён протокол: ${protoName(found)}.');
+      }
+    } catch (e) {
+      sb.writeln('Ошибка проверки: $e');
+    } finally {
+      busy = false;
+      protoScanning = false;
+    }
+    protoReport = sb.toString().trim();
+    notifyListeners();
+    await setProtocol(found ?? protocolCode);
+  }
+
+  /// Журнал обмена с заголовком: версия, адаптер, протокол, напряжение.
+  String logText() {
+    final sb = StringBuffer();
+    sb.writeln('VAZ Scan $version');
+    final a = adapter;
+    if (a != null) {
+      sb.writeln('Адаптер: ${a.version}, протокол: ${a.protocol}');
+      if (a.voltage != null) sb.writeln('Напряжение: ${a.voltage!.toStringAsFixed(1)} В');
+      sb.writeln('ЭБУ отвечает: ${a.ecuResponds ? 'да' : 'нет'}');
+    }
+    sb.writeln('Выбран протокол: ${protoName(protocolCode)}');
+    if (protoReport != null) {
+      sb.writeln('');
+      sb.writeln('Проверка протоколов:');
+      sb.writeln(protoReport);
+    }
+    sb.writeln('');
+    sb.writeln('Журнал:');
+    for (final l in terminal) {
+      sb.writeln(l);
+    }
+    return sb.toString();
+  }
+
+  void clearLog() {
+    terminal.clear();
+    notifyListeners();
   }
 
   Future<void> disconnect() async {

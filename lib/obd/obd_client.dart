@@ -46,6 +46,14 @@ String protoName(String code) {
   return 'Авто';
 }
 
+/// Итог пробы одного протокола.
+class ProtoTry {
+  final bool ok;
+  final int ms;
+  final String summary;
+  const ProtoTry(this.ok, this.ms, this.summary);
+}
+
 class ObdClient {
   final ObdTransport t;
   void Function(String)? onLog;
@@ -88,6 +96,42 @@ class ObdClient {
   Future<bool> _probe(int timeoutMs) async {
     final hs = await hexLines('0100', timeoutMs: timeoutMs);
     return hs.any((l) => l.startsWith('4100'));
+  }
+
+  /// Пробует один протокол и объясняет результат человеческим языком.
+  Future<ProtoTry> tryProtocol(String code) async {
+    await lines('ATSP$code');
+    if (code != '6') await lines('ATST64');
+    final sw = Stopwatch()..start();
+    String r;
+    try {
+      r = await raw('0100', timeoutMs: 30000);
+    } catch (e) {
+      sw.stop();
+      return ProtoTry(false, sw.elapsedMilliseconds, 'ошибка связи с адаптером ($e)');
+    }
+    sw.stop();
+    final up = r.toUpperCase();
+    final sec = (sw.elapsedMilliseconds / 1000).toStringAsFixed(1);
+    if (up.replaceAll(RegExp(r'\s'), '').contains('4100')) {
+      return ProtoTry(true, sw.elapsedMilliseconds, 'ЭБУ ответил ($sec с)');
+    }
+    const reasons = {
+      'BUS INIT: ERROR': 'ЭБУ не принял инициализацию K-линии',
+      'UNABLE TO CONNECT': 'не удалось подключиться',
+      'CAN ERROR': 'ошибка CAN-шины',
+      'NO DATA': 'ЭБУ не ответил на запрос',
+      'BUS BUSY': 'шина занята',
+      'BUFFER FULL': 'переполнение буфера адаптера',
+      'DATA ERROR': 'ответ с ошибкой данных',
+      'FB ERROR': 'обрыв или замыкание линии',
+      'LV RESET': 'просадка питания адаптера',
+    };
+    for (final e in reasons.entries) {
+      if (up.contains(e.key)) return ProtoTry(false, sw.elapsedMilliseconds, 'нет ответа: ${e.value} ($sec с)');
+    }
+    final shown = r.replaceAll(RegExp(r'[\r\n]+'), ' ').trim();
+    return ProtoTry(false, sw.elapsedMilliseconds, 'нет ответа (${shown.isEmpty ? 'пусто' : shown}, $sec с)');
   }
 
   Future<double?> readVoltage() async {
