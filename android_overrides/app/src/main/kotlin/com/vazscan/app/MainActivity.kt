@@ -60,7 +60,6 @@ class MainActivity : FlutterActivity() {
     private fun connect(addr: String) {
         close()
         val ad = BluetoothAdapter.getDefaultAdapter() ?: throw IllegalStateException("Bluetooth недоступен")
-        ad.cancelDiscovery()
         val dev = ad.getRemoteDevice(addr)
         val uuid = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB")
         var s = dev.createRfcommSocketToServiceRecord(uuid)
