@@ -51,6 +51,7 @@ class LiveScreen extends StatelessWidget {
     return Panel(
       child: buildGauge(
         style: app.gaugeStyle,
+        glow: app.palette.glow,
         title: g.title,
         unit: g.unit,
         value: v,

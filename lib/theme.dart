@@ -16,7 +16,7 @@ Color levelColor(int level) => level >= 2 ? alarmColor : (level == 1 ? warnColor
 
 Color sevColor(int sev) => sev >= 3 ? alarmColor : (sev == 2 ? warnColor : infoColor);
 
-/// Набор цветов фона и текста
+/// Набор цветов фона и текста. glow - включает свечение приборов и стеклянные карточки.
 class Palette {
   final String id;
   final String name;
@@ -26,6 +26,7 @@ class Palette {
   final Color nav;
   final Color text;
   final Color dim;
+  final bool glow;
   const Palette({
     required this.id,
     required this.name,
@@ -35,6 +36,7 @@ class Palette {
     required this.nav,
     required this.text,
     required this.dim,
+    this.glow = false,
   });
 }
 
@@ -47,6 +49,8 @@ const List<Palette> palettes = [
       nav: Color(0xFF000000), text: Color(0xFFFFFFFF), dim: Color(0xFFBDBDBD)),
   Palette(id: 'sport', name: 'Спорт', dark: true, bg: Color(0xFF0A0A0A), surface: Color(0xFF1A1A1A),
       nav: Color(0xFF111111), text: Color(0xFFF5F5F5), dim: Color(0xFF9E9E9E)),
+  Palette(id: 'glow', name: 'Свечение', dark: true, bg: Color(0xFF07111F), surface: Color(0xB3142A44),
+      nav: Color(0xFF0A1830), text: Color(0xFFE6F4FF), dim: Color(0xFF8FB8D8), glow: true),
 ];
 
 const List<Color> accentColors = [
@@ -66,6 +70,7 @@ ThemeData vazTheme(Palette p, Color accent) {
     onSurface: p.text,
     onSurfaceVariant: p.dim,
   );
+  final radius = BorderRadius.circular(12);
   return ThemeData(
     useMaterial3: true,
     colorScheme: scheme,
@@ -74,11 +79,40 @@ ThemeData vazTheme(Palette p, Color accent) {
       color: p.surface,
       elevation: 0,
       margin: const EdgeInsets.symmetric(vertical: 4),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(14),
+        side: p.glow ? BorderSide(color: accent.withOpacity(0.45), width: 1) : BorderSide.none,
+      ),
     ),
     navigationBarTheme: NavigationBarThemeData(
       backgroundColor: p.nav,
       indicatorColor: accent.withOpacity(0.25),
+    ),
+    // Кнопки: при нажатии опускаются (тень меньше), темнеют и подсвечиваются
+    filledButtonTheme: FilledButtonThemeData(
+      style: ButtonStyle(
+        elevation: WidgetStateProperty.resolveWith(
+          (s) => s.contains(WidgetState.pressed) ? 1.0 : 8.0,
+        ),
+        shadowColor: WidgetStatePropertyAll(accent.withOpacity(0.7)),
+        backgroundColor: WidgetStateProperty.resolveWith(
+          (s) => s.contains(WidgetState.pressed)
+              ? (Color.lerp(accent, Colors.black, 0.3) ?? accent)
+              : accent,
+        ),
+        shape: WidgetStatePropertyAll(RoundedRectangleBorder(borderRadius: radius)),
+      ),
+    ),
+    outlinedButtonTheme: OutlinedButtonThemeData(
+      style: ButtonStyle(
+        side: WidgetStateProperty.resolveWith(
+          (s) => s.contains(WidgetState.pressed)
+              ? BorderSide(color: accent, width: 2)
+              : BorderSide(color: accent.withOpacity(0.6), width: 1),
+        ),
+        overlayColor: WidgetStatePropertyAll(accent.withOpacity(0.25)),
+        shape: WidgetStatePropertyAll(RoundedRectangleBorder(borderRadius: radius)),
+      ),
     ),
   );
 }

@@ -85,6 +85,7 @@ class AlarmBanner extends StatelessWidget {
 }
 
 class GaugeDial extends StatelessWidget {
+  final bool glow;
   final String title;
   final String unit;
   final double? value;
@@ -101,6 +102,7 @@ class GaugeDial extends StatelessWidget {
     required this.max,
     required this.dec,
     required this.color,
+    this.glow = false,
   });
 
   @override
@@ -111,7 +113,7 @@ class GaugeDial extends StatelessWidget {
       Text(title, textAlign: TextAlign.center, style: TextStyle(fontSize: 13)),
       AspectRatio(
         aspectRatio: 1.1,
-        child: CustomPaint(painter: _DialPainter(frac, color, v != null)),
+        child: CustomPaint(painter: _DialPainter(frac, color, v != null, glow)),
       ),
       Text(
         v == null ? '—' : v.toStringAsFixed(dec),
@@ -126,7 +128,8 @@ class _DialPainter extends CustomPainter {
   final double frac;
   final Color color;
   final bool hasValue;
-  _DialPainter(this.frac, this.color, this.hasValue);
+  final bool glow;
+  _DialPainter(this.frac, this.color, this.hasValue, this.glow);
 
   double _rad(double deg) => deg * pi / 180;
 
@@ -144,6 +147,15 @@ class _DialPainter extends CustomPainter {
       ..color = Color(0xFF2E4A66);
     canvas.drawArc(rect, _rad(135), _rad(270), false, track);
     if (hasValue) {
+      if (glow) {
+        final halo = Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = stroke * 1.9
+          ..strokeCap = StrokeCap.round
+          ..color = color.withOpacity(0.45)
+          ..maskFilter = MaskFilter.blur(BlurStyle.normal, 7);
+        canvas.drawArc(rect, _rad(135), _rad(270 * frac), false, halo);
+      }
       final arc = Paint()
         ..style = PaintingStyle.stroke
         ..strokeWidth = stroke
@@ -171,7 +183,7 @@ class _DialPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _DialPainter old) =>
-      old.frac != frac || old.color != color || old.hasValue != hasValue;
+      old.frac != frac || old.color != color || old.hasValue != hasValue || old.glow != glow;
 }
 
 class ScopeView extends StatelessWidget {
@@ -515,6 +527,7 @@ Widget buildGauge({
   required double max,
   required int dec,
   required Color color,
+  bool glow = false,
 }) {
   switch (style) {
     case 1:
@@ -522,7 +535,7 @@ Widget buildGauge({
     case 2:
       return BarGauge(title: title, unit: unit, value: value, min: min, max: max, dec: dec, color: color);
     default:
-      return GaugeDial(title: title, unit: unit, value: value, min: min, max: max, dec: dec, color: color);
+      return GaugeDial(title: title, unit: unit, value: value, min: min, max: max, dec: dec, color: color, glow: glow);
   }
 }
 
