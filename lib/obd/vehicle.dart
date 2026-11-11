@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 
+import 'ecu_january.dart';
+
 class VehicleInfo {
   final String? vin;
   final String? make;
@@ -11,6 +13,7 @@ class VehicleInfo {
   final double? odometerKm;
   final String? ecuName;
   final String? calibrationId;
+  final JanuaryMatch? januaryEcu;
   final List<String> notes;
   const VehicleInfo({
     this.vin,
@@ -22,6 +25,7 @@ class VehicleInfo {
     this.odometerKm,
     this.ecuName,
     this.calibrationId,
+    this.januaryEcu,
     this.notes = const [],
   });
 
@@ -131,6 +135,8 @@ class VinDecoder {
 
     if (odometerKm == null) notes.add('ЭБУ не передаёт пробег по стандарту OBD-II. Для многих машин до ~2008 года это нормально');
     if (ecu == null) notes.add('ЭБУ не назвал себя: этот запрос поддерживают не все блоки');
+    final january = detectJanuary(ecu, cal);
+    if (january != null) notes.addAll(january.notes);
 
     return VehicleInfo(
       vin: v ?? vin,
@@ -142,6 +148,7 @@ class VinDecoder {
       odometerKm: odometerKm,
       ecuName: ecu,
       calibrationId: cal,
+      januaryEcu: january,
       notes: notes,
     );
   }

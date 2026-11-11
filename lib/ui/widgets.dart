@@ -408,6 +408,7 @@ class VehicleCardW extends StatelessWidget {
         Text('Пробег: ${v.odometerKm == null ? 'ЭБУ не передаёт' : '${v.odometerKm!.toStringAsFixed(0)} км'}'),
         if (v.vin != null) Text('VIN: ${v.vin}'),
         Text('ЭБУ: ${v.ecuName ?? 'не определён'}'),
+        if (v.januaryEcu != null) Text('Семейство ЭБУ: ${v.januaryEcu!.name}'),
         if (v.calibrationId != null) Text('Калибровка: ${v.calibrationId}'),
         for (final n in v.notes) Text(n, style: TextStyle(color: warnColor, fontSize: 12)),
       ]),
