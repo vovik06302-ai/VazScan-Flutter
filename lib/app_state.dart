@@ -276,7 +276,7 @@ class AppState extends ChangeNotifier {
       final t = factory();
       await t.open();
       final c = ObdClient(t)..onLog = _log;
-      status = 'Инициализация адаптера (поиск ЭБУ может занять до минуты)…';
+      status = 'Инициализация адаптера (поиск ЭБУ может занять до 3 минут)…';
       notifyListeners();
       final ai = await c.initialize(protocol: protocolCode);
       _client = c;
@@ -316,7 +316,7 @@ class AppState extends ChangeNotifier {
     liveOn = false;
     busy = true;
     error = null;
-    status = 'Протокол ${protoName(code)}: поиск ЭБУ (до 30 секунд)…';
+    status = 'Протокол ${protoName(code)}: поиск ЭБУ (до минуты)…';
     notifyListeners();
     try {
       final ai = await c.initialize(protocol: code);

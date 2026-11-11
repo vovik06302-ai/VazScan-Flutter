@@ -93,9 +93,45 @@ class ObdClient {
     return out;
   }
 
-  Future<bool> _probe(int timeoutMs) async {
-    final hs = await hexLines('0100', timeoutMs: timeoutMs);
-    return hs.any((l) => l.startsWith('4100'));
+  /// Запросы для проверки связи. Старые блоки часто молчат на 0100, но отвечают на другие.
+  static const probeCmds = ['0100', '0105', '010C', '0902', '0900'];
+
+  /// Запрос, на который ЭБУ ответил в последний раз (null - не ответил).
+  String? probeHit;
+
+  /// Сырой ответ адаптера на последний запрос (для журнала и причин отказа).
+  String lastProbeRaw = '';
+
+  /// Префикс ответа: режим 01 отвечает 41, режим 09 отвечает 49.
+  static String _respPrefix(String cmd) =>
+      '${hex2(int.parse(cmd.substring(0, 2), radix: 16) + 0x40)}${cmd.substring(2)}';
+
+  static List<String> _hexOf(String r) {
+    final out = <String>[];
+    final hexRe = RegExp(r'^[0-9A-F]+$');
+    for (final line in r.split(RegExp(r'[\r\n]')).map((e) => e.trim()).where((e) => e.isNotEmpty)) {
+      final l = line.replaceAll(' ', '').toUpperCase().replaceFirst(RegExp(r'^[0-9A-F]:'), '');
+      if (l.isEmpty || l.length.isOdd || !hexRe.hasMatch(l)) continue;
+      out.add(l);
+    }
+    return out;
+  }
+
+  /// Пробует набор запросов. Первый ждёт timeoutMs, остальные не дольше 6 с.
+  /// Возвращает запрос, на который ответил ЭБУ, или null.
+  Future<String?> _probeAny(int timeoutMs) async {
+    lastProbeRaw = '';
+    for (var i = 0; i < probeCmds.length; i++) {
+      final cmd = probeCmds[i];
+      final t = i == 0 ? timeoutMs : (timeoutMs < 6000 ? timeoutMs : 6000);
+      final r = await raw(cmd, timeoutMs: t);
+      lastProbeRaw = r;
+      if (_hexOf(r).any((l) => l.startsWith(_respPrefix(cmd)))) {
+        probeHit = cmd;
+        return cmd;
+      }
+    }
+    return null;
   }
 
   /// Пробует один протокол и объясняет результат человеческим языком.
@@ -103,18 +139,19 @@ class ObdClient {
     await lines('ATSP$code');
     if (code != '6') await lines('ATST64');
     final sw = Stopwatch()..start();
-    String r;
+    String? hit;
     try {
-      r = await raw('0100', timeoutMs: 30000);
+      hit = await _probeAny(30000);
     } catch (e) {
       sw.stop();
       return ProtoTry(false, sw.elapsedMilliseconds, 'ошибка связи с адаптером ($e)');
     }
     sw.stop();
+    final r = lastProbeRaw;
     final up = r.toUpperCase();
     final sec = (sw.elapsedMilliseconds / 1000).toStringAsFixed(1);
-    if (up.replaceAll(RegExp(r'\s'), '').contains('4100')) {
-      return ProtoTry(true, sw.elapsedMilliseconds, 'ЭБУ ответил ($sec с)');
+    if (hit != null) {
+      return ProtoTry(true, sw.elapsedMilliseconds, 'ЭБУ ответил на запрос $hit ($sec с)');
     }
     const reasons = {
       'BUS INIT: ERROR': 'ЭБУ не принял инициализацию K-линии',
@@ -155,22 +192,42 @@ class ObdClient {
       await lines(c);
     }
     var ok = false;
+    probeHit = null;
     final manual = protocol != '0';
     if (manual) {
-      // Ручной выбор: только этот протокол, без перебора.
+      // Ручной выбор: только этот протокол, без перебора протоколов.
       await lines('ATSP$protocol');
       if (protocol != '6') await lines('ATST64'); // K-линия: ждём ответ ЭБУ до 400 мс
-      ok = await _probe(30000);
+      ok = (await _probeAny(30000)) != null;
+      if (!ok && protocol != '6') {
+        // Тот же протокол, но ждём ответа дольше (старые блоки отвечают медленно)
+        await lines('ATSTFF');
+        ok = (await _probeAny(15000)) != null;
+      }
     } else {
       await lines('ATSP0');
-      ok = await _probe(25000);
+      ok = (await _probeAny(25000)) != null;
       if (!ok) {
         // Старые блоки ВАЗ (K-line) иногда не находятся в авто-режиме
         for (final p in ['3', '5', '4']) {
           await lines('ATSP$p');
-          if (await _probe(15000)) {
+          if ((await _probeAny(15000)) != null) {
             ok = true;
             break;
+          }
+        }
+      }
+      if (!ok) {
+        // Расширенный перебор: другие протоколы и длинное ожидание ответа
+        search:
+        for (final st in ['64', 'FF']) {
+          for (final p in ['3', '4', '5', '6']) {
+            await lines('ATSP$p');
+            await lines('ATST$st');
+            if ((await _probeAny(12000)) != null) {
+              ok = true;
+              break search;
+            }
           }
         }
       }
@@ -188,10 +245,13 @@ class ObdClient {
     if (volt != null && volt < 11.0) {
       notes.add('Напряжение на разъёме OBD низкое (${volt.toStringAsFixed(1)} В). Включите зажигание, проверьте аккумулятор.');
     }
+    if (ok && probeHit != null && probeHit != '0100') {
+      notes.add('ЭБУ ответил на запрос $probeHit. Молчание на 0100 для старых блоков - нормально.');
+    }
     if (!ok && manual) {
-      notes.add('ЭБУ не ответил по протоколу ${protoName(protocol)}. Выберите другой протокол. Если не отвечает ни один, проверьте, что в адаптере разведена K-линия (контакт 7 разъёма OBD).');
+      notes.add('ЭБУ не ответил по протоколу ${protoName(protocol)} ни на один из запросов (${probeCmds.join(', ')}). Выберите другой протокол. Если не отвечает ни один, проверьте, что в адаптере разведена K-линия (контакт 7 разъёма OBD).');
     } else if (!ok) {
-      notes.add('ЭБУ не ответил. Включите зажигание и проверьте, что адаптер вставлен до упора. Старые блоки Январь 5.1 / 7.2 поддерживают OBD-II частично.');
+      notes.add('ЭБУ не ответил ни на один запрос (${probeCmds.join(', ')}) ни по одному протоколу. Включите зажигание и проверьте, что адаптер вставлен до упора. Старые блоки Январь 5.1 / 7.2 поддерживают OBD-II частично.');
     }
     return AdapterInfo(
       version: version,
