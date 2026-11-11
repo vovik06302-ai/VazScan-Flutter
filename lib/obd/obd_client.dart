@@ -102,6 +102,9 @@ class ObdClient {
   /// Сырой ответ адаптера на последний запрос (для журнала и причин отказа).
   String lastProbeRaw = '';
 
+  /// Связь найдена вариантом ISO 9141-2 без проверки ключевых байтов (ATKW0) и с 10400 бод.
+  bool usedIsoVariant = false;
+
   /// Префикс ответа: режим 01 отвечает 41, режим 09 отвечает 49.
   static String _respPrefix(String cmd) =>
       '${hex2(int.parse(cmd.substring(0, 2), radix: 16) + 0x40)}${cmd.substring(2)}';
@@ -171,6 +174,22 @@ class ObdClient {
     return ProtoTry(false, sw.elapsedMilliseconds, 'нет ответа (${shown.isEmpty ? 'пусто' : shown}, $sec с)');
   }
 
+  /// ISO 9141-2 со снятой проверкой ключевых байтов (ATKW0) и скоростью 10400 бод (ATIB10).
+  /// Старые блоки K-линии часто не проходят стандартную проверку и дают BUS INIT: ERROR.
+  /// Если связь найдена, настройки остаются включёнными до переподключения.
+  Future<bool> _tryIsoVariant() async {
+    await lines('ATSP3');
+    await lines('ATKW0');
+    await lines('ATIB10');
+    final hit = (await _probeAny(15000)) != null;
+    if (hit) {
+      usedIsoVariant = true;
+    } else {
+      await lines('ATKW1');
+    }
+    return hit;
+  }
+
   Future<double?> readVoltage() async {
     try {
       final l = await lines('ATRV');
@@ -193,6 +212,7 @@ class ObdClient {
     }
     var ok = false;
     probeHit = null;
+    usedIsoVariant = false;
     final manual = protocol != '0';
     if (manual) {
       // Ручной выбор: только этот протокол, без перебора протоколов.
@@ -204,6 +224,7 @@ class ObdClient {
         await lines('ATSTFF');
         ok = (await _probeAny(15000)) != null;
       }
+      if (!ok && protocol == '3') ok = await _tryIsoVariant();
     } else {
       await lines('ATSP0');
       ok = (await _probeAny(25000)) != null;
@@ -217,6 +238,7 @@ class ObdClient {
           }
         }
       }
+      if (!ok) ok = await _tryIsoVariant();
       if (!ok) {
         // Расширенный перебор: другие протоколы и длинное ожидание ответа
         search:
@@ -247,6 +269,9 @@ class ObdClient {
     }
     if (ok && probeHit != null && probeHit != '0100') {
       notes.add('ЭБУ ответил на запрос $probeHit. Молчание на 0100 для старых блоков - нормально.');
+    }
+    if (usedIsoVariant) {
+      notes.add('Связь установлена по ISO 9141-2 без проверки ключевых байтов (ATKW0) и со скоростью 10400 бод.');
     }
     if (!ok && manual) {
       notes.add('ЭБУ не ответил по протоколу ${protoName(protocol)} ни на один из запросов (${probeCmds.join(', ')}). Выберите другой протокол. Если не отвечает ни один, проверьте, что в адаптере разведена K-линия (контакт 7 разъёма OBD).');
